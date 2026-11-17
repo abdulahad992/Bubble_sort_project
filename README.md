@@ -6,9 +6,7 @@ Python logic -> Flask API -> HTML animation (the smart boy).
 ## Folder structure
 ```
 bubble-sort-project/
-├── app.py                 Flask server (API + serves the frontend)
-├── bubble_sort.py         All the Bubble Sort logic (Python)
-├── test_bubble_sort.py    Tests
+├── app.py                 Everything in Python: Bubble Sort logic + Flask server + terminal mode
 ├── requirements.txt
 └── docs/                  Frontend (GitHub Pages hosts this folder)
     ├── index.html         UI + the boy's SVG animation
@@ -27,8 +25,7 @@ python app.py
 ```
 Open http://127.0.0.1:5000 in the browser.
 
-Python logic only: `python bubble_sort.py 5 3 8 1 9` (save JSON: add `--save output/result.json`)
-Tests: `python test_bubble_sort.py`
+Terminal only (no website): `python app.py 5 3 8 1 9` (save JSON: add `--save output/result.json`)
 
 ## API
 `POST /api/sort` with body `{"array": [5, 1, 4, 2, 8]}` returns `sorted`, `comparisons`, `swaps`, `rounds`,
