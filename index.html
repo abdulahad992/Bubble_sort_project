@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bubble Sort - Swaps &amp; Comparisons</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;700;800&display=swap">
+<style>
+/* style.css - Two-Line Moonlit Puzzle styling + new sections */
+/* Layout: a wide board with two tile lines (top line left to right, bottom line right to left), the boy seated at the board's near edge, a plain compare card below. */
+:root{color-scheme:dark;--bg:#070a18;--panel:#0e1631;--line:#24335f;--text:#e8eefc;--muted:#a3b1d6;--cyan:#5cc8ff;--gold:#ffd36b;--good:#59e0a1;--swap:#ffb347;--ff-display:'Fredoka','Trebuchet MS',system-ui,sans-serif;--ff-body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif}
+body{background:var(--bg);color:var(--text);font-family:var(--ff-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 36px}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--ff-display);font-weight:600;font-size:28px;margin:0;line-height:1.1;text-wrap:balance}
+.sub{margin:6px 0 0;color:var(--muted);font-size:16px;line-height:1.45;max-width:40ch}
+.stage{border-radius:22px;overflow:hidden;background:#0b1026;box-shadow:0 0 0 1px var(--line),0 18px 50px rgba(0,0,0,.5)}
+#scene{display:block;width:100%;height:auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.pair{display:flex;align-items:center;gap:16px}
+.chip{min-width:64px;text-align:center;font-family:var(--ff-display);font-weight:600;font-size:34px;line-height:1;padding:10px 14px;border-radius:14px;background:#14224a;border:2px solid var(--line);font-variant-numeric:tabular-nums;transition:border-color .2s,background .2s}
+.chip.on{border-color:#9be9ff;background:#1b3a78}
+.op{font-family:var(--ff-display);font-weight:600;font-size:34px;min-width:44px;text-align:center;color:var(--muted)}
+.op.swap{color:var(--swap)}.op.stay{color:var(--good)}
+.msg{margin:0;min-height:48px;font-size:17px;font-weight:700;text-align:center;line-height:1.4;text-wrap:balance}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:0}
+.stat span{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--ff-display);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+button{font-family:var(--ff-display);font-weight:500;font-size:16px;padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;min-height:44px}
+button:hover{border-color:var(--cyan)}
+button:active{transform:scale(.98)}
+button.primary{background:var(--gold);color:#2a1b00;border-color:var(--gold)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.speed{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.speed input{flex:1;min-width:0;accent-color:var(--cyan)}
+.how{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px;color:var(--muted);line-height:1.45}
+.how li{display:flex;gap:10px;align-items:baseline}
+.how b{color:var(--text);font-weight:800}
+.piece .halo{fill:#3fb6ff}
+.piece .body{fill:url(#gBlue);stroke:#8fdcff;stroke-width:3;stroke-linejoin:round;transition:stroke .25s}
+.piece .shine{fill:none;stroke:#fff;stroke-opacity:.4;stroke-width:4;stroke-linecap:round}
+.piece.cmp .body{fill:url(#gHot);stroke:#fff}
+.piece.cmp .halo{fill:#9be9ff}
+.piece.lock .body{stroke:#ffd36b}
+.piece.lock .halo{fill:#ffc64d}
+.numtxt{font-family:var(--ff-display);font-weight:600;font-size:26px;text-anchor:middle;fill:#eafcff;stroke:#123a9c;stroke-width:2.5px;stroke-linejoin:round;paint-order:stroke;filter:url(#glowT)}
+.num.cmp .numtxt{fill:#fff}
+.num.lock .numtxt{fill:#fff0c4;stroke:#7a4a05}
+.tag{font-family:var(--ff-body);font-weight:800;font-size:10px;letter-spacing:.12em;fill:#9fdcff;fill-opacity:.85}
+@media (prefers-reduced-motion:reduce){button:active{transform:none}}
+body{margin:0;box-sizing:border-box}
+.mode{font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);width:fit-content}
+.mode.py{color:var(--good);border-color:var(--good)}.mode.js{color:var(--swap);border-color:var(--swap)}
+.custom{display:flex;gap:8px;flex-wrap:wrap}
+.custom input[type=text],.custom select{flex:1;min-width:140px;font:inherit;font-size:15px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);min-height:44px;box-sizing:border-box}
+.err{margin:0;min-height:18px;font-size:13px;color:#ff8f8f}
+.summary{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:14px 16px;display:grid;gap:6px;font-size:15px}
+.summary h2{margin:0 0 4px;font-family:var(--ff-display);font-weight:600;font-size:20px;color:var(--gold)}
+.summary code{font-family:ui-monospace,Consolas,monospace;color:var(--cyan);word-break:break-word}
+.summary .smart{color:var(--good);font-weight:700}
+.logbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.logbox h3{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+#log{margin:0;padding:0 0 0 22px;max-height:170px;overflow:auto;font-size:13px;color:var(--muted);line-height:1.6}
+#log li.sw{color:var(--swap)}#log li.ok{color:var(--good)}
+#thought text{font-family:var(--ff-body);font-weight:800;font-size:11.5px;fill:#14224a;text-anchor:middle}
+[hidden]{display:none!important}
+
+/* ---- layout: phone = one column, laptop / projector = stage left + controls right ---- */
+.layout,.right{display:flex;flex-direction:column;gap:14px}
+.top{display:flex;flex-direction:column;gap:10px}
+@media (min-width:1000px){
+body{padding-block:14px}
+.wrap{max-width:1560px}
+.top{flex-direction:row;align-items:center;justify-content:space-between;gap:24px}
+h1{font-size:34px}
+.sub{max-width:none;font-size:17px;margin-top:4px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,.62fr);gap:24px;align-items:start}
+.left{display:flex;justify-content:center}
+.stage{width:min(100%,calc((100vh - 110px)*400/360))}
+.right{max-height:calc(100vh - 110px);overflow:auto;padding-right:6px}
+.msg{font-size:21px}
+.chip{font-size:44px;min-width:84px}.op{font-size:44px}
+.stat b{font-size:32px}.stat span{font-size:13px}
+button{font-size:19px}
+.custom input[type=text],.custom select{font-size:17px}
+.how{font-size:16px}#log{font-size:15px;max-height:140px}
+}
+.custom input[type=text]{flex:1 1 100%}
+.custom select{flex:1 1 0}
+
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="top">
+<div>
+<h1>Bubble Sort: Swaps &amp; Comparisons</h1>
+<p class="sub">Put the tiles in order, smallest at START and biggest at END. The smart boy counts every comparison and swap.</p>
+</div>
+<div id="mode" class="mode">Connecting...</div>
+</header>
+
+<div class="layout">
+<div class="left">
+<div class="stage">
+<svg id="scene" viewBox="0 0 400 360" role="img" aria-label="A boy sitting at a glowing blue board with two lines of numbered puzzle tiles, sorting them from smallest to biggest">
+<defs>
+<filter id="blur3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+<filter id="blur6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+<filter id="blur12" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12"/></filter>
+<filter id="glowT" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<linearGradient id="gWood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a3320"/><stop offset=".55" stop-color="#3a2116"/><stop offset="1" stop-color="#1f120d"/></linearGradient>
+<radialGradient id="gLamp" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(24 24) scale(200)"><stop offset="0" stop-color="#ffb35c" stop-opacity=".7"/><stop offset=".5" stop-color="#ff8a3c" stop-opacity=".18"/><stop offset="1" stop-color="#ff8a3c" stop-opacity="0"/></radialGradient>
+<radialGradient id="gBloom" cx="200" cy="140" r="240" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4cc9ff" stop-opacity=".55"/><stop offset=".45" stop-color="#2f7dff" stop-opacity=".2"/><stop offset="1" stop-color="#2f7dff" stop-opacity="0"/></radialGradient>
+<radialGradient id="gVig" cx="200" cy="170" r="300" gradientUnits="userSpaceOnUse"><stop offset=".55" stop-color="#03041a" stop-opacity="0"/><stop offset="1" stop-color="#03041a" stop-opacity=".8"/></radialGradient>
+<linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#58b8ff"/><stop offset="1" stop-color="#2358e8"/></linearGradient>
+<linearGradient id="gHot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c6f4ff"/><stop offset="1" stop-color="#5fb4ff"/></linearGradient>
+<linearGradient id="gBodyRim" gradientUnits="userSpaceOnUse" x1="0" y1="262" x2="0" y2="322"><stop offset="0" stop-color="#7fd0ff" stop-opacity=".8"/><stop offset="1" stop-color="#7fd0ff" stop-opacity="0"/></linearGradient>
+<radialGradient id="gPool" cx="200" cy="140" r="260" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e6f4ff" stop-opacity=".8"/><stop offset=".6" stop-color="#b9dcff" stop-opacity=".25"/><stop offset="1" stop-color="#b9dcff" stop-opacity="0"/></radialGradient>
+<linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2faff" stop-opacity=".7"/><stop offset="1" stop-color="#f2faff" stop-opacity=".05"/></linearGradient>
+<radialGradient id="gMoon" cx=".38" cy=".35" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#e3f0ff"/><stop offset="1" stop-color="#b4cdf0"/></radialGradient>
+<radialGradient id="gGlow"><stop offset="0" stop-color="#ffe9a3" stop-opacity=".95"/><stop offset=".5" stop-color="#ffb020" stop-opacity=".4"/><stop offset="1" stop-color="#ffb020" stop-opacity="0"/></radialGradient>
+<linearGradient id="gBox" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a47bff"/><stop offset="1" stop-color="#5a2fd0"/></linearGradient>
+<linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe985"/><stop offset="1" stop-color="#f0a41c"/></linearGradient>
+<marker id="arr" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L6 3 L0 6z" fill="#7fd6ff"/></marker>
+</defs>
+
+<rect width="400" height="360" fill="url(#gWood)"/>
+<g stroke="#000" stroke-opacity=".2" fill="none" stroke-width="1.2">
+<path d="M0 36 Q120 28 220 38 T400 32"/><path d="M0 250 Q130 242 240 254 T400 246"/><path d="M0 330 Q90 340 200 328 T400 336"/>
+</g>
+<rect width="400" height="360" fill="url(#gLamp)"/>
+<circle cx="24" cy="24" r="20" fill="#ffb35c" opacity=".5" filter="url(#blur6)"/>
+<circle cx="24" cy="24" r="9" fill="#ffe6b8"/><circle cx="24" cy="24" r="5" fill="#fff6e0"/>
+
+<g transform="translate(14 290) rotate(-14)"><rect width="24" height="15" rx="2" fill="#c8402f"/><rect x="4" y="-3" width="6" height="4" rx="1" fill="#e0584a"/></g>
+<g transform="translate(364 300) rotate(10)"><rect width="22" height="14" rx="2" fill="#e8b92f"/><rect x="4" y="-3" width="6" height="4" rx="1" fill="#f6d052"/></g>
+
+<circle cx="200" cy="140" r="240" fill="url(#gBloom)"/>
+<rect x="30" y="60" width="340" height="160" rx="16" fill="none" stroke="#4cc9ff" stroke-width="8" opacity=".5" filter="url(#blur6)"/>
+<rect x="30" y="60" width="340" height="160" rx="16" fill="#0a1636" stroke="#4cc9ff" stroke-opacity=".75" stroke-width="2"/>
+<rect x="36" y="66" width="328" height="148" rx="12" fill="#0d1d46"/>
+<text class="tag" x="46" y="73">START &gt;&gt;&gt;</text>
+<text class="tag" x="46" y="212">END &lt;&lt;&lt;</text>
+<text class="tag" x="354" y="73" text-anchor="end">SMALL</text>
+<path d="M358 111 Q368 140 358 169" fill="none" stroke="#7fd6ff" stroke-opacity=".8" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+
+<line id="pairHL" x1="0" y1="0" x2="0" y2="0" stroke="#9be9ff" stroke-width="66" stroke-linecap="round" opacity="0"/>
+<g id="pieces"></g>
+
+<g id="boy">
+<ellipse cx="200" cy="350" rx="112" ry="58" fill="#f08a2c" stroke="#c56214" stroke-width="2"/>
+<ellipse cx="200" cy="350" rx="112" ry="58" fill="none" stroke="url(#gBodyRim)" stroke-width="3"/>
+<ellipse cx="200" cy="322" rx="50" ry="22" fill="#cf5f17"/>
+<g id="head">
+<ellipse cx="156" cy="290" rx="6" ry="9" fill="#f1b896"/><ellipse cx="244" cy="290" rx="6" ry="9" fill="#f1b896"/>
+<circle cx="200" cy="288" r="44" fill="#3a2318"/>
+<g fill="none" stroke-linecap="round" stroke-width="3">
+<path d="M170 272 Q190 254 214 264" stroke="#7a4d35" opacity=".85"/><path d="M176 292 Q200 276 228 284" stroke="#7a4d35" opacity=".85"/><path d="M182 310 Q204 298 226 304" stroke="#7a4d35" opacity=".85"/><path d="M208 268 q8 -6 14 2 q4 8 -6 10" stroke="#9a6446"/>
+</g>
+<circle cx="200" cy="288" r="44" fill="none" stroke="url(#gBodyRim)" stroke-width="3"/>
+<g id="cap"><polygon points="200,250 248,272 200,294 152,272" fill="#1b2350" stroke="#7fd0ff" stroke-width="2" stroke-linejoin="round"/><circle cx="200" cy="272" r="4" fill="#ffd36b"/><path d="M200 272 Q234 274 238 292" fill="none" stroke="#ffd36b" stroke-width="2.5" stroke-linecap="round"/><circle cx="238" cy="295" r="3.6" fill="#ffd36b"/></g>
+</g>
+</g>
+
+<rect width="400" height="360" fill="url(#gVig)" pointer-events="none"/>
+
+<g id="thought"><circle cx="252" cy="283" r="3.2" fill="#f4f8ff"/><circle cx="259" cy="274" r="4.6" fill="#f4f8ff"/><rect x="264" y="230" width="128" height="44" rx="14" fill="#f4f8ff" stroke="#7fd0ff" stroke-width="2"/><text id="t1" x="328" y="248"></text><text id="t2" x="328" y="263"></text></g>
+<g id="nums"></g>
+
+<g id="reward" visibility="hidden">
+<rect id="flash" width="400" height="360" fill="#dff1ff" opacity="0" style="mix-blend-mode:screen"/>
+<circle id="pool" cx="200" cy="140" r="260" fill="url(#gPool)" opacity="0" style="mix-blend-mode:screen"/>
+<polygon id="beam" points="186,10 214,10 336,220 64,220" fill="url(#gBeam)" opacity="0" filter="url(#blur3)" style="mix-blend-mode:screen"/>
+<g fill="none" stroke="#c6e8ff" stroke-width="3"><circle id="rp0" cx="200" cy="140" r="10" opacity="0"/><circle id="rp1" cx="200" cy="140" r="10" opacity="0"/><circle id="rp2" cx="200" cy="140" r="10" opacity="0"/></g>
+<g id="moon" transform="translate(200 30)" opacity="0">
+<circle r="36" fill="#bfe3ff" opacity=".6" filter="url(#blur12)"/>
+<circle r="18" fill="url(#gMoon)"/>
+<circle cx="-5" cy="-4" r="3.5" fill="#9db9dd" opacity=".45"/><circle cx="6" cy="5" r="4.5" fill="#9db9dd" opacity=".4"/>
+</g>
+<g id="box" transform="translate(200 140)" opacity="0">
+<rect x="-58" y="-52" width="130" height="130" rx="12" fill="#000" opacity=".4" filter="url(#blur6)"/>
+<rect x="-62" y="-62" width="124" height="124" rx="9" fill="#3a2a7a" stroke="#6b4fd0" stroke-width="2"/>
+<rect x="-52" y="-52" width="104" height="104" rx="5" fill="#190f33"/>
+<circle id="boxGlow" r="70" fill="url(#gGlow)" opacity="0"/>
+<g id="loot"></g>
+<g id="lid">
+<rect x="-66" y="-66" width="132" height="132" rx="10" fill="url(#gBox)" stroke="#c4a6ff" stroke-width="2"/>
+<rect x="-10" y="-66" width="20" height="132" fill="url(#gGold)"/><rect x="-66" y="-10" width="132" height="20" fill="url(#gGold)"/>
+<g stroke="#b97812" stroke-width="2"><ellipse cx="-16" cy="-4" rx="22" ry="11" transform="rotate(-35 -16 -4)" fill="url(#gGold)"/><ellipse cx="16" cy="-4" rx="22" ry="11" transform="rotate(35 16 -4)" fill="url(#gGold)"/><circle r="8" fill="#ffd45a"/></g>
+</g>
+</g>
+<g id="sparks" fill="#fff6c8"></g>
+</g>
+</svg>
+</div>
+</div>
+<div class="right">
+<section class="card" aria-live="polite">
+<div class="pair"><b id="cA" class="chip">-</b><span id="cOp" class="op">?</span><b id="cB" class="chip">-</b></div>
+<p id="msg" class="msg"></p>
+</section>
+
+<div class="stats">
+<div class="stat"><span>Round</span><b id="sp">1</b></div>
+<div class="stat"><span>Comparisons</span><b id="sc">0</b></div>
+<div class="stat"><span>Swaps</span><b id="ss">0</b></div>
+</div>
+<section id="summary" class="summary" hidden></section>
+
+<div class="controls">
+<button id="bNext" type="button">Next step</button>
+<button id="bAuto" class="primary" type="button">Auto sort</button>
+<button id="bNew" type="button">New puzzle</button>
+</div>
+<label class="speed" for="speed">Speed <input id="speed" type="range" min="0.8" max="3" step="0.2" value="1.4"></label>
+
+<div class="custom">
+<input id="custom" type="text" inputmode="numeric" placeholder="Your numbers: 34, 7, 19, 2 (2 to 10 numbers)" aria-label="Custom numbers">
+<button id="bUse" type="button">Use my numbers</button>
+<select id="preset" aria-label="Preset arrays"><option value="">Preset array...</option></select>
+</div>
+<p id="err" class="err" role="alert"></p>
+
+
+<div class="logbox"><h3>Step log</h3><ol id="log"></ol></div>
+
+<ul class="how">
+<li><b>1.</b><span>Each step checks two neighbours. If the first is bigger, they swap.</span></li>
+<li><b>2.</b><span>After each round the biggest left-over number locks into its place (gold tile).</span></li>
+<li><b>3.</b><span>Smart boy: if a round has 0 swaps, he knows everything is sorted and stops early.</span></li>
+</ul>
+</div>
+</div>
+</main>
+
+<script>
+/* sorter.js - exactly the same logic as bubble_sort.py, written in JavaScript.
+   Only used when the Flask backend is not available (for example on GitHub Pages). */
+window.BubbleSorter = {
+  trace: function (values) {
+    var arr = values.slice(), n = arr.length, steps = [];
+    var comparisons = 0, swaps = 0, rounds = 0;
+    for (var p = 0; p < n - 1; p++) {
+      rounds++;
+      var swapped = false;
+      for (var j = 0; j < n - 1 - p; j++) {
+        comparisons++;
+        var a = arr[j], b = arr[j + 1], doSwap = a > b;
+        if (doSwap) { arr[j] = b; arr[j + 1] = a; swaps++; swapped = true; }
+        steps.push({ step: comparisons, round: rounds, index: j, a: a, b: b, swap: doSwap,
+          comparisons: comparisons, swaps: swaps, array: arr.slice(), locked: [], done: false });
+      }
+      var last = steps[steps.length - 1];
+      last.locked = [n - 1 - p];
+      if (!swapped) {
+        for (var k = 0; k < n - 1 - p; k++) last.locked.push(k);
+        last.done = true; break;
+      }
+      if (p === n - 2) { last.locked.push(0); last.done = true; }
+    }
+    var max = n * (n - 1) / 2;
+    return { original: values.slice(), sorted: arr, comparisons: comparisons, swaps: swaps,
+      rounds: rounds, max_comparisons: max, saved_comparisons: max - comparisons,
+      early_exit: comparisons < max, steps: steps };
+  }
+};
+
+</script>
+<script>
+/* app.js - the Two-Line Moonlit Puzzle animation + the Python backend client.
+   Flow: numbers -> POST api/sort (Flask/Python) -> trace of steps -> the boy animates exactly those steps.
+   If there is no backend (GitHub Pages / file://), sorter.js (same logic) is used instead. */
+(function(){
+'use strict';
+var NS='http://www.w3.org/2000/svg';
+var MAX_TILES=10,COLS=5,CELL=62,GX=45,GY=78,MIN_V=-99,MAX_V=999;
+function slotPos(i){var r=Math.floor(i/COLS),c=i%COLS;if(r%2===1)c=COLS-1-c;return{x:GX+c*CELL+CELL/2,y:GY+r*CELL+CELL/2}}
+var D='M0 0 H42 C42 -6 38 -8 38 -14 A13 13 0 1 1 62 -14 C62 -8 58 -6 58 0 H100 V42 C106 42 108 38 114 38 A13 13 0 1 1 114 62 C108 62 106 58 100 58 V100 H58 C58 94 62 92 62 86 A13 13 0 1 0 38 86 C38 92 42 94 42 100 H0 V58 C6 58 8 62 14 62 A13 13 0 1 0 14 38 C8 38 6 42 0 42 Z';
+var TS=.6;
+var RM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+function $(id){return document.getElementById(id)}
+function mk(tag,attrs){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e}
+function cl(x,a,b){return Math.min(1,Math.max(0,(x-a)/(b-a)))}
+function lerp(a,b,t){return a+(b-a)*t}
+function easeOut(x){return 1-Math.pow(1-x,3)}
+function back(x){var c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+var layers={pieces:$('pieces'),nums:$('nums')};
+var msgEl=$('msg'),cA=$('cA'),cB=$('cB'),cOp=$('cOp'),hl=$('pairHL'),head=$('head');
+var pieces=[],order=[],trace=null,stepIdx=0,n=0,roundNow=1,cmpN=0,swN=0;
+var busy=false,done=false,running=false,ready=false,gen=0,speed=1.4,celebrating=false,reward=null,boardOp=1;
+var lookX=0,headX=0;
+
+function setMsg(t){msgEl.textContent=t}
+function think(a,b){$('t1').textContent=a||'';$('t2').textContent=b||''}   // the boy's thought bubble
+function setPair(a,b,op,cls){
+cA.textContent=a===null?'-':a;cB.textContent=b===null?'-':b;cOp.textContent=op;
+cOp.className='op'+(cls?' '+cls:'');
+cA.classList.toggle('on',a!==null&&cls!=='x');cB.classList.toggle('on',a!==null&&cls!=='x');
+}
+function stats(){$('sp').textContent=Math.min(roundNow,Math.max(n-1,1));$('sc').textContent=cmpN;$('ss').textContent=swN}
+function T(ms){return ms/speed}
+function wait(ms){return new Promise(function(r){setTimeout(r,T(ms))})}
+function setButtons(on){['bNext','bAuto','bNew','bUse'].forEach(function(id){$(id).disabled=!on&&id!=='bNew'})}
+
+/* ---------- Python backend (ya JS fallback) ---------- */
+async function solve(vals){
+var ctrl=new AbortController(),t=setTimeout(function(){ctrl.abort()},2500),data;
+try{
+var res=await fetch('api/sort',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({array:vals}),signal:ctrl.signal});
+if(!res.ok)throw new Error('HTTP '+res.status);
+data=await res.json();data.source='python';
+}catch(e){data=window.BubbleSorter.trace(vals);data.source='browser'}
+clearTimeout(t);
+var m=$('mode');
+if(data.source==='python'){m.textContent='Python (Flask) backend connected';m.className='mode py'}
+else{m.textContent='Browser mode: running a JS copy of the Python logic';m.className='mode js'}
+return data;
+}
+
+/* ---------- tiles ---------- */
+function makePiece(val,slot){
+var g=mk('g',{'class':'piece'});
+g.innerHTML='<path class="halo" d="'+D+'" filter="url(#blur6)"/><path class="body" d="'+D+'"/><path class="shine" d="M9 24 Q9 9 24 9"/>';
+var nn=mk('g',{'class':'num'});
+nn.innerHTML='<text class="numtxt" x="0" y="0" dy=".36em">'+val+'</text>';
+layers.pieces.appendChild(g);layers.nums.appendChild(nn);
+var sp=slotPos(slot);
+return{val:val,g:g,n:nn,halo:g.firstChild,x:sp.x,y:sp.y,mv:null,tilt:Math.random()*6-3,rot:0,cmpA:0,cmp:false,locked:false,haloA:.38,liftA:0,idx:slot};
+}
+function flag(p){
+p.g.classList.toggle('cmp',p.cmp);p.g.classList.toggle('lock',p.locked);
+p.n.classList.toggle('cmp',p.cmp);p.n.classList.toggle('lock',p.locked);
+}
+function movePiece(p,to,dur,arc,liftF){p.mv={fx:p.x,fy:p.y,tx:to.x,ty:to.y,s:performance.now(),d:dur,arc:arc,lf:liftF}}
+function showPair(j){
+var a=slotPos(j),b=slotPos(j+1);
+hl.setAttribute('x1',a.x);hl.setAttribute('y1',a.y);hl.setAttribute('x2',b.x);hl.setAttribute('y2',b.y);
+hl.setAttribute('opacity','.2');lookX=(a.x+b.x)/2-200;
+}
+function hidePair(){hl.setAttribute('opacity','0');lookX=0}
+
+function randomVals(){
+var vals,ok;
+do{var pool=[];while(pool.length<MAX_TILES){var v=5+Math.floor(Math.random()*95);if(pool.indexOf(v)<0)pool.push(v)}
+vals=pool;ok=false;for(var i=0;i<vals.length-1;i++)if(vals[i]>vals[i+1])ok=true}while(!ok);
+return vals;
+}
+function showErr(t){$('err').textContent=t||''}
+
+async function fresh(vals){
+gen++;var g=gen;
+running=false;busy=false;done=false;ready=false;celebrating=false;reward=null;boardOp=1;
+$('bAuto').textContent='Auto sort';
+layers.pieces.innerHTML='';layers.nums.innerHTML='';
+$('reward').setAttribute('visibility','hidden');
+$('loot').innerHTML='';$('sparks').innerHTML='';
+$('summary').hidden=true;$('log').innerHTML='';
+hidePair();
+vals=vals||randomVals();
+n=vals.length;pieces=[];order=[];
+for(var s=0;s<n;s++){var p=makePiece(vals[s],s);pieces.push(p);order.push(p)}
+roundNow=1;cmpN=0;swN=0;stepIdx=0;stats();
+setPair(null,null,'?','x');
+setMsg('Asking Python for the plan...');think('Thinking...','');
+setButtons(false);
+var res=await solve(vals);if(g!==gen)return;
+trace=res;ready=true;setButtons(true);
+setMsg('Press Next step. The boy will look at the first two tiles.');
+think('Ready!','Press Next step');
+}
+
+function addLog(s){
+var li=document.createElement('li');
+li.className=s.swap?'sw':'ok';
+li.textContent='Round '+s.round+': '+s.a+' vs '+s.b+(s.swap?'  ->  swap':s.a===s.b?'  ->  equal, stay':'  ->  stay');
+$('log').appendChild(li);$('log').scrollTop=1e6;
+}
+
+async function step(){
+if(busy||done||celebrating||!ready)return;
+if(!trace.steps.length){celebrate();return}
+busy=true;var g=gen;
+var s=trace.steps[stepIdx],j=s.index,pa=order[j],pb=order[j+1];
+showPair(j);
+setPair(s.a,s.b,'?','');
+setMsg('Look at '+s.a+' and '+s.b+'. Which one is bigger?');
+think(s.a+' vs '+s.b,'which is bigger?');
+await wait(900);if(g!==gen)return;
+pa.cmp=true;pb.cmp=true;flag(pa);flag(pb);cmpN=s.comparisons;stats();
+await wait(500);if(g!==gen)return;
+if(s.swap){
+setPair(s.a,s.b,'>','swap');
+setMsg(s.a+' is bigger than '+s.b+'. Bigger numbers go toward the END, so they swap.');
+think(s.a+' > '+s.b,'swap them!');
+await wait(700);if(g!==gen)return;
+var A=slotPos(j),B=slotPos(j+1);
+layers.pieces.appendChild(pa.g);
+movePiece(pa,B,T(700),12,1);movePiece(pb,A,T(700),-12,.2);
+order[j]=pb;order[j+1]=pa;swN=s.swaps;stats();
+await wait(800);if(g!==gen)return;
+}else{
+var eq=s.a===s.b;
+setPair(s.a,s.b,eq?'=':'<','stay');
+setMsg(eq?s.a+' and '+s.b+' are equal. They are already in order, so nothing moves.':s.a+' is smaller than '+s.b+'. They are already in order, so nothing moves.');
+think(eq?'They are equal':s.a+' < '+s.b,'nothing to do');
+await wait(1100);if(g!==gen)return;
+}
+pa.cmp=false;pb.cmp=false;flag(pa);flag(pb);hidePair();
+addLog(s);stepIdx++;
+s.locked.forEach(function(k){order[k].locked=true;flag(order[k])});
+if(s.done){busy=false;celebrate();return}
+if(s.locked.length){
+roundNow=s.round+1;stats();
+setPair(null,null,'?','x');
+setMsg(order[s.locked[0]].val+' reached its final place (gold). Round '+roundNow+' starts from the beginning.');
+think('Round '+s.round+' done','next round!');
+}
+busy=false;
+}
+
+async function auto(){
+if(!ready)return;
+if(running){running=false;$('bAuto').textContent='Auto sort';return}
+if(done||celebrating)return;
+running=true;$('bAuto').textContent='Pause';var g=gen;
+while(running&&!done&&!celebrating&&g===gen){
+if(!busy)await step();else await wait(120);
+await wait(150);
+}
+if(g===gen){running=false;$('bAuto').textContent='Auto sort'}
+}
+
+/* ---------- custom input / presets ---------- */
+function parseInput(text){
+var parts=text.split(/[\s,;]+/).filter(Boolean);
+if(parts.length<2||parts.length>MAX_TILES)return{error:'Enter 2 to '+MAX_TILES+' numbers, separated by commas or spaces.'};
+var out=[];
+for(var i=0;i<parts.length;i++){
+if(!/^-?\d+$/.test(parts[i]))return{error:'"'+parts[i]+'" is not a number. Use whole numbers only.'};
+var v=parseInt(parts[i],10);
+if(v<MIN_V||v>MAX_V)return{error:'Numbers must be between '+MIN_V+' and '+MAX_V+'.'};
+out.push(v);
+}
+return{values:out};
+}
+function useMine(){
+var r=parseInput($('custom').value);
+if(r.error){showErr(r.error);return}
+showErr('');fresh(r.values);
+}
+async function loadPresets(){
+var sel=$('preset'),list=[];
+list=[{"name": "Reversed (worst case)", "values": [90, 80, 70, 60, 50, 40, 30, 20, 10, 5]}, {"name": "Nearly sorted", "values": [10, 20, 30, 50, 40, 60, 70, 90, 80, 100]}, {"name": "Already sorted (early exit)", "values": [5, 12, 18, 25, 31, 44, 52, 67, 73, 89]}, {"name": "With duplicates", "values": [7, 3, 7, 1, 3, 9, 1, 5, 5, 2]}];
+list.forEach(function(p,i){var o=document.createElement('option');o.value=i;o.textContent=p.name;sel.appendChild(o)});
+sel.addEventListener('change',function(){
+if(sel.value==='')return;
+var v=list[+sel.value].values;$('custom').value=v.join(', ');showErr('');fresh(v.slice());sel.value='';
+});
+}
+
+var items=[],sparks=[],coinCount=0,gemCount=0,finalMsg=false;
+var GEMS=['#ff4d6d','#4cc9ff','#3ddc97','#b36bff','#ffb347'];
+function coinEl(){
+var g=mk('g',{});
+g.innerHTML='<circle r="14" fill="url(#gGold)" stroke="#a8680f" stroke-width="2"/><circle r="9.5" fill="none" stroke="#ffe69a" stroke-width="1.5"/><path d="M0 -5 L1.5 -1.5 L5 0 L1.5 1.5 L0 5 L-1.5 1.5 L-5 0 L-1.5 -1.5Z" fill="#fff1b8"/><path d="M-10 -5 Q-6 -11 0 -11" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2" stroke-linecap="round"/>';
+return g;
+}
+function gemEl(c){
+var g=mk('g',{});
+g.innerHTML='<polygon points="0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5" fill="'+c+'" stroke="#fff" stroke-opacity=".7" stroke-width="1.5"/><polygon points="0,-15 13,-7.5 0,0 -13,-7.5" fill="#fff" opacity=".38"/><polygon points="0,0 13,-7.5 13,7.5" fill="#000" opacity=".12"/><path d="M-13 -7.5 L0 0 L0 15 M13 -7.5 L0 0" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1"/>';
+return g;
+}
+function buildLoot(){
+var loot=$('loot');loot.innerHTML='';items=[];coinCount=0;gemCount=0;
+var kinds=[];for(var i=0;i<21;i++)kinds.push(i%3===2?'gem':'coin');shuffle(kinds);
+var slots=[];
+for(i=0;i<9;i++)slots.push({a:i/9*Math.PI*2+.3+(Math.random()-.5)*.15,r:96+Math.random()*8});
+for(i=0;i<12;i++)slots.push({a:i/12*Math.PI*2+.1+(Math.random()-.5)*.12,r:128+Math.random()*8});
+for(i=0;i<4;i++){slots.push({a:Math.random()*6.28,r:Math.random()*24});kinds.push(i===3?'gem':'coin')}
+slots.forEach(function(s,i){
+var kind=kinds[i];var el=kind==='coin'?coinEl():gemEl(GEMS[i%GEMS.length]);
+if(kind==='coin')coinCount++;else gemCount++;
+loot.appendChild(el);
+items.push({el:el,kind:kind,a:s.a,r:s.r,d:2.0+i*.055,spin:Math.random()*360});
+});
+var sp=$('sparks');sp.innerHTML='';sparks=[];
+for(i=0;i<16;i++){
+var e=mk('path',{d:'M0 -9 L2 -2 L9 0 L2 2 L0 9 L-2 2 L-9 0 L-2 -2Z'});
+sp.appendChild(e);sparks.push({el:e,x:50+Math.random()*300,y:30+Math.random()*230,ph:Math.random()*6.28,sc:.6+Math.random()*.9});
+}
+}
+function celebrate(){
+celebrating=true;running=false;finalMsg=false;$('bAuto').textContent='Auto sort';done=true;
+hidePair();setPair(null,null,'?','x');
+var t=trace;
+setMsg(t.early_exit?'No swaps in the last round, so the boy knows it is sorted and stops early!':'All sorted: smallest at START, biggest at END.');
+think('Sorted!','Smart sort done');
+var sm=$('summary');
+sm.innerHTML='<h2>Result</h2>'
++'<div>Original: <code>['+t.original.join(', ')+']</code></div>'
++'<div>Sorted: <code>['+t.sorted.join(', ')+']</code></div>'
++'<div>Comparisons: <b>'+t.comparisons+'</b> &nbsp; Swaps: <b>'+t.swaps+'</b> &nbsp; Rounds: <b>'+t.rounds+'</b></div>'
++'<div class="smart">'+(t.saved_comparisons>0?'The smart boy saved '+t.saved_comparisons+' comparisons by stopping early (naive maximum = '+t.max_comparisons+').':'No comparisons could be saved here (maximum = '+t.max_comparisons+').')+'</div>'
++'<div>Calculated by: '+(t.source==='python'?'Python (Flask)':'browser (JS copy of the Python logic)')+'</div>';
+sm.hidden=false;
+buildLoot();
+$('reward').setAttribute('visibility','visible');
+reward={t0:performance.now()};
+}
+
+function runReward(now){
+var t=(now-reward.t0)/1000*(RM?1.6:1);
+var f1=cl(t,0,.35),f2=cl(t,.35,1.8);
+var fo=.85*f1*(1-.8*f2)*(1-cl(t,1.8,4));
+$('flash').setAttribute('opacity',(RM?Math.min(fo,.2):fo).toFixed(3));
+$('pool').setAttribute('opacity',(.75*cl(t,0,.5)*(1-.5*cl(t,1,3))).toFixed(3));
+$('beam').setAttribute('opacity',(.5*cl(t,.1,.7)*(1-.55*cl(t,1.5,3))).toFixed(3));
+var mo=cl(t,0,.7);
+$('moon').setAttribute('transform','translate(200 30) scale('+(back(mo)).toFixed(3)+')');
+$('moon').setAttribute('opacity',cl(t,0,.4).toFixed(3));
+for(var i=0;i<3;i++){
+var tt=cl(t,i*.35,i*.35+1.5),c=$('rp'+i);
+c.setAttribute('r',(14+260*easeOut(tt)).toFixed(1));
+c.setAttribute('opacity',(t<i*.35?0:.8*(1-tt)).toFixed(3));
+}
+boardOp=1-.72*cl(t,.5,1.3);
+var ba=cl(t,.8,1.5),bs=lerp(1.6,1,back(ba));
+$('box').setAttribute('transform','translate(200 140) scale('+bs.toFixed(3)+')');
+$('box').setAttribute('opacity',cl(t,.8,1.1).toFixed(3));
+var e=cl(t,1.9,2.6),ee=easeOut(e);
+$('lid').setAttribute('transform','translate(0 '+(-46*ee).toFixed(1)+') rotate('+(-16*ee).toFixed(1)+') scale('+(1+.28*ee).toFixed(3)+')');
+$('lid').setAttribute('opacity',(1-cl(t,2.2,2.6)).toFixed(3));
+$('boxGlow').setAttribute('opacity',(e*(.8+.2*Math.sin(t*3))).toFixed(3));
+items.forEach(function(it,k){
+var p=cl(t,it.d,it.d+.95);
+if(p<=0){it.el.setAttribute('transform','scale(0)');return}
+var ep=easeOut(p),s=Math.max(0,back(p));
+var x=Math.cos(it.a)*it.r*ep,y=Math.sin(it.a)*it.r*ep-Math.sin(p*Math.PI)*40;
+var sx=1,rot=0;
+if(it.kind==='coin'){sx=lerp(Math.abs(Math.cos(p*20)),1,p*p)}
+else{rot=(1-p)*it.spin;s*=1+(p>=1?.05*Math.sin(t*3+k):0)}
+it.el.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+') rotate('+rot.toFixed(1)+') scale('+(sx*s).toFixed(3)+' '+s.toFixed(3)+')');
+});
+if(t>3.2){
+sparks.forEach(function(sp){
+var v=Math.max(0,Math.sin(t*2.2+sp.ph));v=v*v*v;
+sp.el.setAttribute('transform','translate('+(sp.x-200).toFixed(1)+' '+(sp.y-140).toFixed(1)+') scale('+(v*sp.sc).toFixed(3)+')');
+});
+}
+}
+
+var last=performance.now();
+function frame(now){
+var dt=Math.min(.05,(now-last)/1000);last=now;
+pieces.forEach(function(p){
+var lift=0;
+if(p.mv){
+var k=cl(now,p.mv.s,p.mv.s+p.mv.d);
+var e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+var dx=p.mv.tx-p.mv.fx,dy=p.mv.ty-p.mv.fy,len=Math.hypot(dx,dy)||1;
+var off=p.mv.arc*Math.sin(Math.PI*k);
+p.x=p.mv.fx+dx*e+(-dy/len)*off;p.y=p.mv.fy+dy*e+(dx/len)*off;
+lift=Math.sin(Math.PI*k)*.08*p.mv.lf;
+if(k>=1){p.x=p.mv.tx;p.y=p.mv.ty;p.mv=null}
+}
+p.liftA=lift;
+p.rot+=((p.locked?0:p.tilt)-p.rot)*(1-Math.exp(-5*dt));
+p.cmpA+=((p.cmp?1:0)-p.cmpA)*(1-Math.exp(-10*dt));
+var s=1+.07*p.cmpA+p.liftA;
+p.g.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+') rotate('+p.rot.toFixed(2)+') scale('+(TS*s).toFixed(3)+') translate(-50 -50)');
+p.n.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+') rotate('+p.rot.toFixed(2)+') scale('+s.toFixed(3)+')');
+var target=p.cmp?.95:(p.locked?.5:.38);
+p.haloA+=(target-p.haloA)*(1-Math.exp(-8*dt));
+p.halo.setAttribute('opacity',(p.haloA+((p.cmp||p.locked)?0:.07*Math.sin(now/600+p.idx*1.3))).toFixed(3));
+});
+layers.pieces.setAttribute('opacity',boardOp.toFixed(3));layers.nums.setAttribute('opacity',boardOp.toFixed(3));
+var f=1-Math.exp(-(RM?30:7)*dt);
+headX+=(lookX*.3-headX)*f;
+head.setAttribute('transform','translate('+headX.toFixed(1)+' 0) rotate('+(headX*.12).toFixed(2)+' 200 288)');
+if(reward)runReward(now);
+requestAnimationFrame(frame);
+}
+
+$('bNext').addEventListener('click',function(){if(!running)step()});
+$('bAuto').addEventListener('click',auto);
+$('bNew').addEventListener('click',function(){showErr('');fresh()});
+$('bUse').addEventListener('click',useMine);
+$('custom').addEventListener('keydown',function(e){if(e.key==='Enter')useMine()});
+$('speed').addEventListener('input',function(e){speed=+e.target.value});
+loadPresets();
+fresh();
+requestAnimationFrame(frame);
+})();
+
+</script>
+</body>
+</html>
