@@ -6,110 +6,129 @@ app.py - the whole project in one file: Bubble Sort logic + Flask server.
   python app.py 5 3 8 1 9 --save output/result.json    (also saves the result as JSON)
 
 API: POST /api/sort  {"array": [5, 1, 4, 2, 8]}   |   GET /api/health
+
+The file has 3 parts:
+  1. Bubble Sort logic   (validate_array, bubble_sort_trace)
+  2. Flask server        (routes that the web page calls)
+  3. Terminal mode       (run_cli, used when numbers are typed after "python app.py")
 """
-import json
-import os
-import sys
-from pathlib import Path
+import json                     # to save the result as a .json file
+import os                       # to read the PORT / FLASK_DEBUG environment variables
+import sys                      # to read the numbers typed in the terminal
+from pathlib import Path        # to build file paths that work on Windows, Mac and Linux
 
 from flask import Flask, jsonify, request, send_from_directory
 
-DOCS = Path(__file__).resolve().parent / "docs"     # frontend folder (GitHub Pages can host it too)
+# The folder that holds the web page (index.html, css, js). It sits next to this file.
+DOCS = Path(__file__).resolve().parent / "docs"
+
+# Limits for the input: at most 50 numbers, each between -99 and 999.
 MAX_LEN, MIN_VALUE, MAX_VALUE = 50, -99, 999
 
+# Create the Flask app. static_folder=docs means Flask serves css/js files from docs/,
+# and static_url_path="" means they are reachable directly (for example /js/app.js).
 app = Flask(__name__, static_folder=str(DOCS), static_url_path="")
 
 
-# ------------------------- Bubble Sort logic -------------------------
+# ======================= 1. BUBBLE SORT LOGIC =======================
 def validate_array(data, max_len=MAX_LEN):
     """Checks that the input is a list of integers. Raises ValueError otherwise."""
-    if not isinstance(data, list) or not data:
+    if not isinstance(data, list) or not data:               # must be a non-empty list
         raise ValueError("array must be a non-empty list of integers")
-    if len(data) > max_len:
+    if len(data) > max_len:                                  # not too many numbers
         raise ValueError(f"array can have at most {max_len} numbers")
+    # bool is a subclass of int in Python (True == 1), so it is rejected on purpose
     if any(isinstance(v, bool) or not isinstance(v, int) for v in data):
         raise ValueError("every item must be an integer")
-    if any(not MIN_VALUE <= v <= MAX_VALUE for v in data):
+    if any(not MIN_VALUE <= v <= MAX_VALUE for v in data):   # every number inside the range
         raise ValueError(f"numbers must be between {MIN_VALUE} and {MAX_VALUE}")
-    return list(data)
+    return list(data)                                        # return a copy of the clean list
 
 
 def bubble_sort_trace(values):
     """Smart Bubble Sort: returns the sorted array, the counters and every step (for the animation)."""
-    arr, n = list(values), len(values)               # work on a copy
-    steps, comparisons, swaps, rounds = [], 0, 0, 0
+    arr, n = list(values), len(values)               # work on a copy so the original list is untouched
+    steps, comparisons, swaps, rounds = [], 0, 0, 0  # steps = log of every comparison; the rest are counters
 
     for p in range(n - 1):                           # OUTER LOOP: one round per pass, the biggest number "bubbles" to the end
         rounds += 1
-        swapped = False
+        swapped = False                              # becomes True if this round swaps anything
         for j in range(n - 1 - p):                   # INNER LOOP: compare neighbours (last p items are already in place)
             comparisons += 1                         # COMPARISON COUNTER
-            a, b = arr[j], arr[j + 1]
+            a, b = arr[j], arr[j + 1]                # the two neighbours being compared
             do_swap = a > b                          # '>' (not '>=') keeps equal numbers in their original order
             if do_swap:
-                arr[j], arr[j + 1] = b, a
+                arr[j], arr[j + 1] = b, a            # swap the two numbers
                 swaps += 1                           # SWAP COUNTER
                 swapped = True
+            # Save this comparison as one step. The web page replays these steps as the animation.
             steps.append({"step": comparisons, "round": rounds, "index": j, "a": a, "b": b, "swap": do_swap,
                           "comparisons": comparisons, "swaps": swaps, "array": list(arr), "locked": [], "done": False})
+        # The round is over. Mark which tiles are now in their final place (the gold tiles).
         last = steps[-1]
         last["locked"] = [n - 1 - p]                 # the item at index n-1-p is now final
         if not swapped:                              # EARLY EXIT (smart boy): 0 swaps => already sorted, stop
-            last["locked"] += range(n - 1 - p)
+            last["locked"] += range(n - 1 - p)       # everything before it is also in place
             last["done"] = True
             break
-        if p == n - 2:
+        if p == n - 2:                               # last possible round: the first item is final too
             last["locked"].append(0)
             last["done"] = True
 
+    # Without the early exit, Bubble Sort would always make n(n-1)/2 comparisons.
     most = n * (n - 1) // 2
     return {"original": list(values), "sorted": arr, "comparisons": comparisons, "swaps": swaps, "rounds": rounds,
             "max_comparisons": most, "saved_comparisons": most - comparisons, "early_exit": comparisons < most,
             "steps": steps}
 
 
-# ------------------------- Flask server -------------------------
+# ======================= 2. FLASK SERVER =======================
 @app.get("/")
 def index():
+    # Open http://127.0.0.1:5000/ -> send the web page
     return send_from_directory(DOCS, "index.html")
 
 
 @app.get("/api/health")
 def health():
+    # Simple check that the server is running (the page uses it to show "Python (Flask) backend connected")
     return jsonify(status="ok", engine="python-flask")
 
 
 @app.post("/api/sort")
 def sort_api():
+    # The page sends {"array": [...]}. get_json(silent=True) gives None instead of an error if the body is bad.
     try:
         values = validate_array((request.get_json(silent=True) or {}).get("array"))
     except ValueError as err:
-        return jsonify(error=str(err)), 400
-    return jsonify(bubble_sort_trace(values))
+        return jsonify(error=str(err)), 400          # 400 = bad request, with the reason
+    return jsonify(bubble_sort_trace(values))        # sort with Python and send the result back as JSON
 
 
-# ------------------------- Terminal mode -------------------------
+# ======================= 3. TERMINAL MODE =======================
 def run_cli(args):
+    """Handles: python app.py 5 3 8 1 9 [--save output/result.json]"""
     save = None
-    if "--save" in args:
+    if "--save" in args:                             # optional: where to save the JSON result
         i = args.index("--save")
         save = args[i + 1] if i + 1 < len(args) else None
-        del args[i:i + 2]
+        del args[i:i + 2]                            # remove "--save <path>" so only numbers remain
     try:
-        res = bubble_sort_trace(validate_array([int(x) for x in args]))
+        res = bubble_sort_trace(validate_array([int(x) for x in args]))   # text -> integers -> check -> sort
     except ValueError as err:
         sys.exit(f"Error: {err}\nUsage: python app.py 5 3 8 1 9 [--save output/result.json]")
     for label, key in [("Original", "original"), ("Sorted", "sorted"), ("Comparisons", "comparisons"),
                        ("Swaps", "swaps"), ("Rounds", "rounds")]:
-        print(f"{label:<11}: {res[key]}")
-    if save:
+        print(f"{label:<11}: {res[key]}")            # print the main results
+    if save:                                         # write the full result (with all steps) to a JSON file
         Path(save).parent.mkdir(parents=True, exist_ok=True)
         Path(save).write_text(json.dumps(res, indent=2), encoding="utf-8")
         print("Saved JSON :", save)
 
 
+# This block runs only when the file is started directly (python app.py), not when it is imported.
 if __name__ == "__main__":
-    if sys.argv[1:]:
+    if sys.argv[1:]:                                 # numbers were typed -> terminal mode
         run_cli(sys.argv[1:])
-    else:
+    else:                                            # no numbers -> start the website
         app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=os.environ.get("FLASK_DEBUG") == "1")
