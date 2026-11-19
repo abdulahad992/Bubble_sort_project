@@ -212,6 +212,7 @@ button{font-size:19px}
 <div class="controls">
 <button id="bNext" type="button">Next step</button>
 <button id="bAuto" class="primary" type="button">Auto sort</button>
+<button id="bPause" type="button" aria-pressed="false">&#9208; Pause</button>
 <button id="bNew" type="button">New puzzle</button>
 </div>
 <label class="speed" for="speed">Speed <input id="speed" type="range" min="0.8" max="3" step="0.2" value="1.4"></label>
@@ -293,6 +294,16 @@ var msgEl=$('msg'),cA=$('cA'),cB=$('cB'),cOp=$('cOp'),hl=$('pairHL'),head=$('hea
 var pieces=[],order=[],trace=null,stepIdx=0,n=0,roundNow=1,cmpN=0,swN=0;
 var busy=false,done=false,running=false,ready=false,gen=0,speed=1.4,celebrating=false,reward=null,boardOp=1;
 var lookX=0,headX=0;
+/* pause / play: a virtual clock that stops while paused, so tiles, head, waits and the reward all freeze together */
+var paused=false,pauseStart=0,pausedTotal=0;
+function vnow(){return (paused?pauseStart:performance.now())-pausedTotal}
+function setPaused(p){
+if(p===paused)return;
+if(p){pauseStart=performance.now()}else{pausedTotal+=performance.now()-pauseStart}
+paused=p;
+$('bPause').innerHTML=p?'&#9654; Play':'&#9208; Pause';
+$('bPause').setAttribute('aria-pressed',p?'true':'false');
+}
 
 function setMsg(t){msgEl.textContent=t}
 function think(a,b){$('t1').textContent=a||'';$('t2').textContent=b||''}   // the boy's thought bubble
@@ -303,7 +314,8 @@ cA.classList.toggle('on',a!==null&&cls!=='x');cB.classList.toggle('on',a!==null&
 }
 function stats(){$('sp').textContent=Math.min(roundNow,Math.max(n-1,1));$('sc').textContent=cmpN;$('ss').textContent=swN}
 function T(ms){return ms/speed}
-function wait(ms){return new Promise(function(r){setTimeout(r,T(ms))})}
+function sleep(ms){return new Promise(function(r){var rem=ms,t0=performance.now();(function tick(){var nw=performance.now();if(!paused)rem-=nw-t0;t0=nw;if(rem<=0)r();else setTimeout(tick,paused?50:Math.min(rem,50))})()})}
+function wait(ms){return sleep(T(ms))}
 function setButtons(on){['bNext','bAuto','bNew','bUse'].forEach(function(id){$(id).disabled=!on&&id!=='bNew'})}
 
 /* ---------- Python backend (ya JS fallback) ---------- */
@@ -335,7 +347,7 @@ function flag(p){
 p.g.classList.toggle('cmp',p.cmp);p.g.classList.toggle('lock',p.locked);
 p.n.classList.toggle('cmp',p.cmp);p.n.classList.toggle('lock',p.locked);
 }
-function movePiece(p,to,dur,arc,liftF){p.mv={fx:p.x,fy:p.y,tx:to.x,ty:to.y,s:performance.now(),d:dur,arc:arc,lf:liftF}}
+function movePiece(p,to,dur,arc,liftF){p.mv={fx:p.x,fy:p.y,tx:to.x,ty:to.y,s:vnow(),d:dur,arc:arc,lf:liftF}}
 function showPair(j){
 var a=slotPos(j),b=slotPos(j+1);
 hl.setAttribute('x1',a.x);hl.setAttribute('y1',a.y);hl.setAttribute('x2',b.x);hl.setAttribute('y2',b.y);
@@ -353,6 +365,7 @@ function showErr(t){$('err').textContent=t||''}
 
 async function fresh(vals){
 gen++;var g=gen;
+setPaused(false);
 running=false;busy=false;done=false;ready=false;celebrating=false;reward=null;boardOp=1;
 $('bAuto').textContent='Auto sort';
 layers.pieces.innerHTML='';layers.nums.innerHTML='';
@@ -507,9 +520,13 @@ sm.innerHTML='<h2>Result</h2>'
 +'<div class="smart">'+(t.saved_comparisons>0?'The smart boy saved '+t.saved_comparisons+' comparisons by stopping early (naive maximum = '+t.max_comparisons+').':'No comparisons could be saved here (maximum = '+t.max_comparisons+').')+'</div>'
 +'<div>Calculated by: '+(t.source==='python'?'Python (Flask)':'browser (JS copy of the Python logic)')+'</div>';
 sm.hidden=false;
+var cg=gen;
+sleep(5000).then(function(){   // reward appears 5 seconds after sorting completes (pausable)
+if(cg!==gen)return;
 buildLoot();
 $('reward').setAttribute('visibility','visible');
-reward={t0:performance.now()};
+reward={t0:vnow()};
+});
 }
 
 function runReward(now){
@@ -556,10 +573,12 @@ sp.el.setAttribute('transform','translate('+(sp.x-200).toFixed(1)+' '+(sp.y-140)
 var last=performance.now();
 function frame(now){
 var dt=Math.min(.05,(now-last)/1000);last=now;
+if(paused)dt=0;
+var vn=(paused?pauseStart:now)-pausedTotal;
 pieces.forEach(function(p){
 var lift=0;
 if(p.mv){
-var k=cl(now,p.mv.s,p.mv.s+p.mv.d);
+var k=cl(vn,p.mv.s,p.mv.s+p.mv.d);
 var e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
 var dx=p.mv.tx-p.mv.fx,dy=p.mv.ty-p.mv.fy,len=Math.hypot(dx,dy)||1;
 var off=p.mv.arc*Math.sin(Math.PI*k);
@@ -575,18 +594,19 @@ p.g.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+') r
 p.n.setAttribute('transform','translate('+p.x.toFixed(1)+' '+p.y.toFixed(1)+') rotate('+p.rot.toFixed(2)+') scale('+s.toFixed(3)+')');
 var target=p.cmp?.95:(p.locked?.5:.38);
 p.haloA+=(target-p.haloA)*(1-Math.exp(-8*dt));
-p.halo.setAttribute('opacity',(p.haloA+((p.cmp||p.locked)?0:.07*Math.sin(now/600+p.idx*1.3))).toFixed(3));
+p.halo.setAttribute('opacity',(p.haloA+((p.cmp||p.locked)?0:.07*Math.sin(vn/600+p.idx*1.3))).toFixed(3));
 });
 layers.pieces.setAttribute('opacity',boardOp.toFixed(3));layers.nums.setAttribute('opacity',boardOp.toFixed(3));
 var f=1-Math.exp(-(RM?30:7)*dt);
 headX+=(lookX*.3-headX)*f;
 head.setAttribute('transform','translate('+headX.toFixed(1)+' 0) rotate('+(headX*.12).toFixed(2)+' 200 288)');
-if(reward)runReward(now);
+if(reward)runReward(vn);
 requestAnimationFrame(frame);
 }
 
 $('bNext').addEventListener('click',function(){if(!running)step()});
 $('bAuto').addEventListener('click',auto);
+$('bPause').addEventListener('click',function(){setPaused(!paused)});
 $('bNew').addEventListener('click',function(){showErr('');fresh()});
 $('bUse').addEventListener('click',useMine);
 $('custom').addEventListener('keydown',function(e){if(e.key==='Enter')useMine()});
